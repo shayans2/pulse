@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from dash.exceptions import PreventUpdate
 from producer import send_to_kafka, start_run_samples_in_background
-# from producer import run_samples    start_run_samples_in_background
+# # from producer import run_samples    start_run_samples_in_background
 from dotenv import load_dotenv
 import os
 
@@ -45,29 +45,34 @@ app.layout = html.Div([
             dbc.Col(dcc.Graph(id='live-update-graph'), width=12)
         ]),
         dbc.Row([
+            dbc.Alert(
+                "Success!",
+                id="success-alert",
+                is_open=False,
+                dismissable=True,
+                color="success",
+            ),
             dbc.Col(
-                html.Button('Reset Records', id='reset-button', n_clicks=0),
-                width={"size": 6, "offset": 3},
+                html.Button('Reset Records', id='reset-button', n_clicks=0, className="btn btn-lg btn-dark rounded-pill"),
+                width={"size": 2},
+                className="d-grid gap-2"
+            ),
+                dbc.Col(
+                html.Button('Run Samples', id='samples-button', n_clicks=0, className="btn btn-lg btn-dark rounded-pill"),
+                width={"size": 2},
                 className="d-grid gap-2"
             )
-        ]),
+        ], style={'display': 'flex', 'justifyContent': 'center', 'alignItems': 'center', 'paddingBottom': '32px'}),
         dbc.Row([
-            dbc.Col(
-                html.Button('Run Samples', id='samples-button', n_clicks=0),
-                width={"size": 6, "offset": 3},
-                className="d-grid gap-2"
-            )
-        ]),
-        dbc.Row([
-            dbc.Col(dbc.Input(id='input-text', placeholder='Enter text here...', type='text'), width=10),
-            dbc.Col(html.Button('Submit', id='submit-button', n_clicks=0), width=2),
-        ]),
+            dbc.Col(dbc.Input(id='input-text', placeholder='Enter text here...', type='text'), width=7),
+            dbc.Col(html.Button('Submit', id='submit-button', className="btn btn-dark rounded-pill", n_clicks=0), width=2),
+        ], style={'display': 'flex', 'justifyContent': 'center', 'alignItems': 'center', 'paddingBottom': '32px'}),
         dbc.Row([
             dbc.Col(
                 dash_table.DataTable(
                     id='table',
                     columns=[{"name": i, "id": i} for i in ['comment', 'classified']],
-                    style_table={'height': '300px', 'overflowY': 'auto'},
+                    style_table={'height': '320px', 'overflowY': 'auto'},
                     style_cell={'textAlign': 'left'},
                 ),
                 width=12,
@@ -106,12 +111,13 @@ def update_graph_live(n):
     return figure
 
 @app.callback(
-    Output('reset-button', 'children'),
-    Input('reset-button', 'n_clicks')
+    Output('success-alert', 'is_open', allow_duplicate=True),
+    Output('success-alert', 'children', allow_duplicate=True),
+    Input('reset-button', 'n_clicks'),
+    [State('success-alert', 'is_open')],
+    prevent_initial_call=True
 )
-def reset_records(n_clicks):
-    if n_clicks < 1:
-        raise PreventUpdate  # No clicks yet, nothing to do
+def reset_records(n_clicks, is_open):
 
     try:
         with engine.begin() as conn:  # auto-commits or auto-rolls back
@@ -121,30 +127,32 @@ def reset_records(n_clicks):
         print(f"Error: {e}")
         feedback = "Failed to reset records."
 
-    return feedback
+    return True, feedback
 
 @app.callback(
-    Output('samples-button', 'children'),  # Just to show some feedback
-    Input('samples-button', 'n_clicks')
+    Output('success-alert', 'is_open', allow_duplicate=True),
+    Output('success-alert', 'children', allow_duplicate=True),
+    Input('samples-button', 'n_clicks'),
+    [State('success-alert', 'is_open')],
+    prevent_initial_call=True
 )
-def start_samples(n_clicks):
-    if n_clicks < 1:
-        raise PreventUpdate  # No clicks yet, nothing to do
+def start_samples(n_clicks, is_open):
 
     start_run_samples_in_background()
-    return "Running samples."
+    return True, "Running samples."
 
 @app.callback(
-    Output('submit-button', 'children'),  # Just to show some feedback on the button
+    Output('success-alert', 'is_open', allow_duplicate=True),
+    Output('success-alert', 'children', allow_duplicate=True),
     Input('submit-button', 'n_clicks'),
-    State('input-text', 'value')
+    State('input-text', 'value'),
+    [State('success-alert', 'is_open')],
+    prevent_initial_call=True
 )
-def handle_dash_input(n_clicks, text):
-    if n_clicks < 1 or not text:
-        raise PreventUpdate
+def handle_dash_input(n_clicks, text, is_open):
     topic = os.getenv('KAFKA_TOPIC')
     feedback = send_to_kafka(topic, text)
-    return feedback
+    return True, feedback
 
 @app.callback(
     Output('table', 'data'),

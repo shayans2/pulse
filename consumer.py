@@ -78,7 +78,7 @@ def load_consumer(topic):
 batch_size = int(os.getenv('BATCH_SIZE', 1))
 batch_data = []
 
-def fetch_and_insert_messages(sql_connector, topic, run_duration_secs):
+def fetch_and_insert_messages(sql_connector, topic):
     consumer = load_consumer(topic)
     classifier, tfidf, dic = load_model()
 
@@ -110,9 +110,8 @@ def kafka_consumer_main():
     mysql_connector.create_table()
 
     topic = os.getenv('KAFKA_TOPIC')
-    run_duration_secs = 30
 
-    fetch_and_insert_messages(mysql_connector, topic, run_duration_secs)
+    fetch_and_insert_messages(mysql_connector, topic)
 
 if __name__ == '__main__':
     kafka_consumer_main()

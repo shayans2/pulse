@@ -5,9 +5,8 @@ import plotly.graph_objs as go
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-from dash.exceptions import PreventUpdate
 from producer import send_to_kafka, start_run_samples_in_background
-# # from producer import run_samples    start_run_samples_in_background
+# # from producer import run_samples
 from dotenv import load_dotenv
 import os
 
@@ -42,7 +41,7 @@ app.layout = html.Div([
                     className="mb-5 mt-5")
         ]),
         dbc.Row([
-            dbc.Col(dcc.Graph(id='live-update-graph'), width=12)
+            dbc.Col(dcc.Graph(id='live-update-graph', animate=True), width=12)
         ]),
         dbc.Row([
             dbc.Alert(
